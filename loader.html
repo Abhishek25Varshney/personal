@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Previous animations remain same */
+        @keyframes slideIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .animate-slide-in {
+            animation: slideIn 0.5s ease-out;
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        /* Improved table styles with better contrast */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1rem;
+            background-color: white;
+        }
+
+        th, td {
+            border: 1px solid #e2e8f0;
+            padding: 0.75rem;
+            text-align: left;
+        }
+
+        /* Explicit header styling with better contrast */
+        thead th, tr:first-child th {
+            background-color: #4f46e5 !important; /* Indigo header */
+            color: white !important;
+            font-weight: 600;
+            padding: 1rem 0.75rem;
+        }
+
+        td {
+            cursor: pointer;
+            transition: background-color 0.2s;
+            background-color: white;
+            color: #1f2937;
+        }
+
+        td:hover {
+            background-color: #f1f5f9;
+        }
+
+        /* Link styles */
+        a {
+            color: #4f46e5;
+            text-decoration: none;
+        }
+
+        a:hover {
+            color: #4338ca;
+        }
+
+        /* Navigation tabs */
+        .tab-nav {
+            display: flex;
+            gap: 1px;
+            background-color: #e5e7eb;
+            padding: 1px;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .tab-nav button {
+            padding: 0.75rem 1.5rem;
+            background-color: white;
+            border: none;
+            cursor: pointer;
+            flex: 1;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .tab-nav button:first-child {
+            border-top-left-radius: 0.5rem;
+            border-bottom-left-radius: 0.5rem;
+        }
+
+        .tab-nav button:last-child {
+            border-top-right-radius: 0.5rem;
+            border-bottom-right-radius: 0.5rem;
+        }
+
+        .tab-nav button.active {
+            background-color: #4f46e5;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Content container */
+        #content {
+            background-color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+        }
+    </style>
+    <script>
+    // Store encrypted content directly in the script
+    const encryptedContent = `PASTE_YOUR_ENCRYPTED_CONTENT_HERE`; 
+
+    class HTMLEncryption {
+        static async decryptHTML(encryptedData, password) {
+            try {
+                const combined = new Uint8Array(atob(encryptedData).split('').map(char => char.charCodeAt(0)));
+                const salt = combined.slice(0, 16);
+                const iv = combined.slice(16, 28);
+                const data = combined.slice(28);
+                
+                const encoder = new TextEncoder();
+                const keyMaterial = await crypto.subtle.importKey(
+                    "raw",
+                    encoder.encode(password),
+                    "PBKDF2",
+                    false,
+                    ["deriveBits", "deriveKey"]
+                );
+                
+                const key = await crypto.subtle.deriveKey(
+                    {
+                        name: "PBKDF2",
+                        salt: salt,
+                        iterations: 100000,
+                        hash: "SHA-256"
+                    },
+                    keyMaterial,
+                    { name: "AES-GCM", length: 256 },
+                    false,
+                    ["decrypt"]
+                );
+                
+                const decrypted = await crypto.subtle.decrypt(
+                    { name: "AES-GCM", iv: iv },
+                    key,
+                    data
+                );
+                
+                return new TextDecoder().decode(decrypted);
+            } catch (error) {
+                throw new Error("Invalid password or corrupted data.");
+            }
+        }
+    }
+
+    async function loadEncryptedContent() {
+        try {
+            const password = document.getElementById('password').value;
+            const decryptedHTML = await HTMLEncryption.decryptHTML(encryptedContent, password);
+            
+            // Insert the decrypted content
+            document.getElementById('loginContainer').style.display = 'none';
+            document.getElementById('content').innerHTML = decryptedHTML;
+
+            // Initialize Alpine.js
+            Alpine.start();
+
+            // Add click-to-copy functionality
+            initializeCopyToClipboard();
+        } catch (error) {
+            alert('Failed to load content: ' + error.message);
+        }
+    }
+
+    function initializeCopyToClipboard() {
+        const cells = document.getElementsByTagName('td');
+        for (let cell of cells) {
+            cell.addEventListener('click', function(e) {
+                // Don't copy if clicking a link
+                if (e.target.tagName === 'A') return;
+                
+                const text = this.textContent.trim();
+                navigator.clipboard.writeText(text).then(() => {
+                    // Visual feedback
+                    const originalBg = this.style.backgroundColor;
+                    this.style.backgroundColor = '#86efac';
+                    setTimeout(() => {
+                        this.style.backgroundColor = originalBg;
+                    }, 500);
+                });
+            });
+        }
+    }
+
+    // Handle Enter key
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('password').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                loadEncryptedContent();
+            }
+        });
+    });
+    </script>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto p-6">
+        <div id="loginContainer" class="bg-white p-6 rounded-lg shadow-md max-w-md mx-auto mt-20">
+            <h2 class="text-2xl font-bold mb-4 text-indigo-700">Enter Password</h2>
+            <input type="password" id="password" 
+                   class="block w-full p-2 mb-4 border rounded-md" 
+                   placeholder="Enter password to decrypt"
+                   autofocus />
+            <button onclick="loadEncryptedContent()" 
+                    class="w-full bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors">
+                Decrypt Content
+            </button>
+        </div>
+
+        <div id="content"></div>
+    </div>
+</body>
+</html>
