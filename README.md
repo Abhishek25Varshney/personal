@@ -39,7 +39,7 @@ This tool allows you to encrypt HTML files and create a secure loader that decry
 
 ## Requirements
 
-- Node.js installed on your system
+- Node.js installed on your system(22.11.0)
 - Basic familiarity with command line operations
 
 ## Support
